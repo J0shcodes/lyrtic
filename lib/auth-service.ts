@@ -74,7 +74,7 @@ export const authService = {
     return safeUser;
   },
 
-  async createSeesion(
+  async createSession(
     userId: string,
     userAgent?: string,
     ipAddress?: string,
