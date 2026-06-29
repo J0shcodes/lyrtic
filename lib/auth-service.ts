@@ -31,7 +31,12 @@ export const authService = {
     );
     const user = userResult.rows[0] as User;
 
-    const slug = organizationName.toLowerCase().replace(/\s+/g, "-");
+    const baseSlug = organizationName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    const slug = `${baseSlug}-${crypto.randomBytes(3).toString("hex")}`;
+
     const orgResult = await query(
       `INSERT INTO organizations (name, slug, plan, settings)
        VALUES ($1, $2, 'free', '{}') RETURNING *`,
@@ -69,6 +74,7 @@ export const authService = {
       return null;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password_hash, ...safeUser } = dbUser;
 
     return safeUser;
@@ -95,10 +101,15 @@ export const authService = {
     token: string,
   ): Promise<(User & { organisation_id: string; role: string }) | null> {
     const result = await query(
-      `SELECT u.*, m.organization_id, m.role FROM users u
+      `SELECT u.id, u.email, u.full_name, u.avatar_url, u.email_verified,
+              u.created_at, u.updated_at, u.deleted_at,
+              m.organization_id, m.role
+       FROM users u
        JOIN sessions s ON s.user_id = u.id
        JOIN memberships m ON m.user_id = u.id
-       WHERE s.token = $1 AND s.expires_at > now() AND u.deleted_at IS NULL`,
+       WHERE s.token = $1
+         AND s.expires_at > now()
+         AND u.deleted_at IS NULL`,
       [token],
     );
 
@@ -126,7 +137,8 @@ export const authService = {
   // Get user by id
   async getUser(userId: string): Promise<User | null> {
     const result = await query(
-      `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT id, email, full_name, avatar_url, email_verified, created_at, updated_at
+       FROM users WHERE id = $1 AND deleted_at IS NULL`,
       [userId],
     );
     return result.rows[0] || null;

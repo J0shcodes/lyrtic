@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authService } from "@/lib/auth-service";
 import { cookies } from "next/headers";
-import { use } from "react";
 
 export async function POST(request: NextRequest) {
   try {
