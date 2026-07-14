@@ -191,16 +191,44 @@ export interface PaginatedResponse<T> {
 // Dashboard & Analytics Types
 // ============================================================================
 
+// export interface DashboardMetrics {
+//   totalCustomers: number
+//   activeCustomers: number
+//   churnedCustomers: number
+//   averageHealthScore: number
+//   criticalRiskCount: number
+//   totalRevenue: number
+//   revenueThisMonth: number
+//   customersByStage: Record<string, number>
+//   topSegments: Array<{ name: string; count: number }>
+// }
+
+export interface AtRiskCustomer {
+  id: string;
+  full_name: string;
+  email: string;
+  health_score: number;
+  churn_risk: "low" | "medium" | "high" | "critical";
+  total_revenue: number;
+}
 export interface DashboardMetrics {
-  totalCustomers: number
-  activeCustomers: number
-  churnedCustomers: number
-  averageHealthScore: number
-  criticalRiskCount: number
-  totalRevenue: number
-  revenueThisMonth: number
-  customersByStage: Record<string, number>
-  topSegments: Array<{ name: string; count: number }>
+  totalCustomers: number;
+  activeCustomers: number;
+  churnedCustomers: number;
+  averageHealthScore: number;
+  criticalRiskCount: number;
+  highRiskCount: number;
+  mediumRiskCount: number;
+  lowRiskCount: number;
+  newThisWeek: number;
+  totalRevenue: number;
+  topAtRisk: AtRiskCustomer[];
+  healthDistribution: {
+    healthy: number;
+    at_risk: number;
+    high_risk: number;
+    critical: number;
+  };
 }
 
 export interface ChartDataPoint {

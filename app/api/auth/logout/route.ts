@@ -17,6 +17,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const cookieStore = await cookies();
     cookieStore.delete("auth-token");
-    return NextResponse.json({ success: true }, { status: 200 }); { status: 500 });
+    return NextResponse.json({ success: true }, { status: 200 })
   }
 }

@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   TrendingUp,
@@ -9,98 +11,58 @@ import {
   AlertTriangle,
   ArrowRight,
 } from "lucide-react";
+import { DashboardMetrics } from "@/lib/types";
+import { HttpError } from "@/lib/http-error";
+import { StatCard } from "@/components/ui/StatCard";
 
-interface DashboardMetrics {
-  totalCustomers: number;
-  activeCustomers: number;
-  churnedCustomers: number;
-  averageHealthScore: number;
-  criticalRiskCount: number;
-  totalRevenue: number;
-}
+// interface DashboardMetrics {
+//   totalCustomers: number;
+//   activeCustomers: number;
+//   churnedCustomers: number;
+//   averageHealthScore: number;
+//   criticalRiskCount: number;
+//   totalRevenue: number;
+// }
 
-const StatCard = ({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  trend,
-  variant = "default",
-}: {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon: React.ReactNode;
-  trend?: { value: number; isPositive: boolean };
-  variant?: "default" | "warning" | "success";
-}) => (
-  <div
-    className={`border border-border rounded-lg p-6 ${
-      variant === "warning"
-        ? "bg-destructive/5"
-        : variant === "success"
-          ? "bg-primary/5"
-          : "bg-card"
-    }`}
-  >
-    <div className="flex items-start justify-between mb-4">
-      <div
-        className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-          variant === "warning"
-            ? "bg-destructive/10"
-            : variant === "success"
-              ? "bg-primary/10"
-              : "bg-muted"
-        }`}
-      >
-        {Icon}
-      </div>
-      {trend && (
-        <div
-          className={`text-sm font-medium ${trend.isPositive ? "text-green-600" : "text-red-600"}`}
-        >
-          {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}%
-        </div>
-      )}
-    </div>
-    <h3 className="text-sm font-medium text-muted-foreground mb-1">{title}</h3>
-    <div className="text-3xl font-bold mb-1">{value}</div>
-    {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-  </div>
-);
+const fetchMetrics = async (): Promise<DashboardMetrics> => {
+  const response = await fetch("/api/dashboard/metrics");
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new HttpError(
+      errorData.error || "Failed to fetch metrics",
+      response.status,
+    );
+  }
+
+  return response.json();
+};
 
 export default function DashboardPage() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const router = useRouter();
+
+  const {
+    data: metrics,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<DashboardMetrics, HttpError>({
+    queryKey: ["dashboard", "metrics"],
+    queryFn: fetchMetrics,
+    retry: (failureCount, error) => {
+      if (error.status === 401) return false;
+      return failureCount < 3;
+    },
+  });
 
   useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const response = await fetch("/api/dashboard/metrics");
-        if (response.ok) {
-          const data = await response.json();
-          setMetrics(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch metrics:", error);
-        // Set mock data for demo
-        setMetrics({
-          totalCustomers: 1234,
-          activeCustomers: 987,
-          churnedCustomers: 45,
-          averageHealthScore: 72.5,
-          criticalRiskCount: 12,
-          totalRevenue: 54320,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (error instanceof HttpError && error.status === 401) {
+      router.push("/sign-in");
+    }
+  }, [error, router]);
 
-    fetchMetrics();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -114,6 +76,16 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  if (isError && error.status !== 401) {
+    return (
+      <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-sm">
+        {error.message || "An unexpected error occurred while loading metrics."}
+      </div>
+    );
+  }
+
+  if (!metrics) return null;
 
   return (
     <div className="space-y-8">

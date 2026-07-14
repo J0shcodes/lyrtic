@@ -97,9 +97,13 @@ export const authService = {
     return result.rows[0] as Session;
   },
 
+  /**
+   * Look up the user + their active organization via a session token.
+   * This is the primary method used by withAuth().
+   */
   async getUserBySession(
     token: string,
-  ): Promise<(User & { organisation_id: string; role: string }) | null> {
+  ): Promise<(User & { organization_id: string; role: string }) | null> {
     const result = await query(
       `SELECT u.id, u.email, u.full_name, u.avatar_url, u.email_verified,
               u.created_at, u.updated_at, u.deleted_at,

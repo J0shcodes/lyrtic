@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { withAuth } from "@/lib/auth-middleware";
+import { requireAuth, withAuth } from "@/lib/auth-middleware";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await withAuth(request);
+    // const session = await withAuth(request);
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // if (!session) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
+    const authResult = await requireAuth(request)
+
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
 
-    const { organization_id } = session;
+    const { organization_id } = authResult;
 
     const [customerMetrics, revenueResult, riskDistribution, healthBuckets] =
       await Promise.all([

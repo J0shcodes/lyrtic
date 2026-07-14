@@ -23,6 +23,7 @@ export default function CustomersPage() {
         const response = await fetch("/api/customers");
         if (response.ok) {
           const data = await response.json();
+          console.log(data)
           setCustomers(data);
         }
       } catch (error) {

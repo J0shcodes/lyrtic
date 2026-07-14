@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, SubmitEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Brain } from "lucide-react";
@@ -19,7 +19,7 @@ export default function SignInPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);

@@ -10,6 +10,10 @@ import {Signer} from "@aws-sdk/rds-signer"
 import {awsCredentialsProvider} from "@vercel/functions/oidc"
 import fs from "fs"
 import path from "path"
+import { fileURLToPath } from "url"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 async function setupSchema() {
   const signer = new Signer({
@@ -39,11 +43,24 @@ async function setupSchema() {
 
     // Read and execute schema file
     const schemaPath = path.join(__dirname, '001-setup-lyrtic-schema.sql');
+    console.log(`📋 Reading ${schemaPath}...`)
     const schema = fs.readFileSync(schemaPath, 'utf-8');
 
-    console.log('📋 Executing schema setup...');
+    console.log('🚀 Executing core schema setup...');
     await conn.query(schema);
-    console.log('✅ Schema setup completed successfully!');
+    console.log('✅ Core schema completed.');
+
+    const migrationPath = path.join(__dirname, '002-add-customers-unique-constraint.sql');
+    if (fs.existsSync(migrationPath)) {
+      console.log(`📋 Reading ${migrationPath}...`);
+      const migration = fs.readFileSync(migrationPath, 'utf-8');
+      
+      console.log('🚀 Executing unique constraints migration...');
+      await conn.query(migration);
+      console.log('✅ Constraints migration completed.');
+    }
+
+    console.log('🎉 Database setup completed successfully!');
 
     conn.release();
   } catch (error) {
