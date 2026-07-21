@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { query } from "@/lib/db";
-import { getCustomerHealthBreakdown } from "@/services/health-score-service";
+import { getCustomerHealthBreakdown } from "@/lib/health-score-service";
 
 type Params = { params: Promise<{ id: string }> };
 

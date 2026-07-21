@@ -231,6 +231,16 @@ export interface DashboardMetrics {
   };
 }
 
+export interface RecentCustomer {
+  id: string;
+  full_name: string;
+  email: string;
+  health_score: number;
+  churn_risk: string;
+  status: string;
+  total_revenue: number;
+}
+
 export interface ChartDataPoint {
   date: string
   value: number

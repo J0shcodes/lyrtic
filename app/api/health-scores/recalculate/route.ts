@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
-import { recalculateOrgHealthScores } from "@/services/health-score-service";
+import { recalculateOrgHealthScores } from "@/lib/health-score-service";
 
 export async function POST(request: NextRequest) {
   try {

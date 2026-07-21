@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Users,
   CreditCard,
+  RefreshCw
 } from "lucide-react";
 
 type ImportType = "customers" | "transactions";
@@ -19,6 +20,13 @@ interface ImportResult {
   total: number;
   message?: string;
   error_sample?: Array<{ row: number; error: string }>;
+}
+
+interface RecalcResult {
+  success: boolean;
+  updated?: number;
+  message?: string;
+  error?: string;
 }
 
 const IMPORT_CONFIG = {
@@ -142,6 +150,9 @@ export default function ImportPage() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
 
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalcResult, setRecalcResult] = useState<RecalcResult | null>(null);
+
   const config = IMPORT_CONFIG[activeTab];
   const Icon = config.icon;
 
@@ -222,6 +233,25 @@ export default function ImportPage() {
     }
   };
 
+  const handleRecalculate = async () => {
+    setRecalculating(true);
+    setRecalcResult(null);
+    try {
+      const res = await fetch("/api/health-scores/recalculate", {
+        method: "POST",
+      });
+      const data = await res.json();
+      setRecalcResult(data);
+    } catch {
+      setRecalcResult({
+        success: false,
+        error: "Network error — please try again.",
+      });
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -285,56 +315,6 @@ export default function ImportPage() {
             onDrop={handleDrop}
           />
         </div>
-
-        {/* <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-lg p-12 text-center transition ${
-            dragActive
-              ? "border-primary bg-primary/5"
-              : "border-border hover:border-primary/50"
-          }`}
-        >
-          <input
-            type="file"
-            id="file-input"
-            accept=".csv"
-            onChange={handleChange}
-            className="hidden"
-            disabled={uploading}
-          />
-
-          <label
-            htmlFor="file-input"
-            className="cursor-pointer space-y-3 flex flex-col items-center"
-          >
-            {!file ? (
-              <>
-                <Upload className="w-12 h-12 text-muted-foreground mx-auto" />
-                <div>
-                  <p className="text-lg font-semibold mb-1">
-                    Drag and drop your CSV file
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    or click to browse
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <FileText className="w-12 h-12 text-primary mx-auto" />
-                <div>
-                  <p className="text-lg font-semibold mb-1">{file.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {(file.size / 1024).toFixed(2)} KB
-                  </p>
-                </div>
-              </>
-            )}
-          </label>
-        </div> */}
 
         {/* Progress */}
         {uploading && (
@@ -428,7 +408,68 @@ export default function ImportPage() {
           )}
         </div>
       </form>
-      
+
+      {/* ── Health Score Recalculation ────────────────────────────────────── */}
+      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+        <div>
+          <h3 className="font-semibold flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 text-primary" />
+            Recalculate Health Scores
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Run this after importing transaction data, or any time you want
+            scores to reflect the latest customer activity. All customers in
+            your account are updated at once.
+          </p>
+        </div>
+
+        <button
+          onClick={handleRecalculate}
+          disabled={recalculating}
+          className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-semibold hover:bg-muted disabled:opacity-50 transition"
+        >
+          <RefreshCw
+            className={`w-4 h-4 ${recalculating ? "animate-spin" : ""}`}
+          />
+          {recalculating ? "Recalculating..." : "Recalculate now"}
+        </button>
+
+        {/* Recalc result */}
+        {recalcResult && (
+          <div
+            className={`rounded-lg p-3 flex items-start gap-2 text-sm ${
+              recalcResult.success
+                ? "bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900"
+                : "bg-destructive/5 border border-destructive/20"
+            }`}
+          >
+            {recalcResult.success ? (
+              <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+            )}
+            <div>
+              {recalcResult.success ? (
+                <p className="text-green-700 dark:text-green-400 font-medium">
+                  Health scores updated for {recalcResult.updated} customers.{" "}
+                  <a
+                    href="/dashboard/customers"
+                    className="underline hover:no-underline"
+                  >
+                    View customers →
+                  </a>
+                </p>
+              ) : (
+                <p className="text-destructive">
+                  {recalcResult.error ??
+                    "Recalculation failed. Please try again."}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Format requirements */}
       <div className="bg-muted rounded-lg p-6 space-y-4">
         <h3 className="font-semibold flex items-center gap-2">
@@ -437,43 +478,72 @@ export default function ImportPage() {
         </h3>
         <div className="text-sm text-muted-foreground space-y-2">
           <p>
-            <span className="font-medium text-foreground">Required columns:</span>{" "}
+            <span className="font-medium text-foreground">
+              Required columns:
+            </span>{" "}
             {config.requiredColumns.map((c) => (
-              <code key={c} className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5">{c}</code>
+              <code
+                key={c}
+                className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5"
+              >
+                {c}
+              </code>
             ))}
           </p>
           <p>
-            <span className="font-medium text-foreground">Optional columns:</span>{" "}
+            <span className="font-medium text-foreground">
+              Optional columns:
+            </span>{" "}
             {config.optionalColumns.map((c) => (
-              <code key={c} className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5">{c}</code>
+              <code
+                key={c}
+                className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5"
+              >
+                {c}
+              </code>
             ))}
           </p>
           {config.validStatuses.length > 0 && (
             <p>
-              <span className="font-medium text-foreground">Valid status values:</span>{" "}
+              <span className="font-medium text-foreground">
+                Valid status values:
+              </span>{" "}
               {config.validStatuses.map((s) => (
-                <code key={s} className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5">{s}</code>
+                <code
+                  key={s}
+                  className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5"
+                >
+                  {s}
+                </code>
               ))}
             </p>
           )}
           {config.validStages.length > 0 && (
             <p>
-              <span className="font-medium text-foreground">Valid lifecycle_stage values:</span>{" "}
+              <span className="font-medium text-foreground">
+                Valid lifecycle_stage values:
+              </span>{" "}
               {config.validStages.map((s) => (
-                <code key={s} className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5">{s}</code>
+                <code
+                  key={s}
+                  className="bg-background px-1.5 py-0.5 rounded text-xs mx-0.5"
+                >
+                  {s}
+                </code>
               ))}
             </p>
           )}
           <p className="pt-1">Maximum 50,000 rows · 10 MB file size limit</p>
           {activeTab === "transactions" && (
             <p className="text-amber-600 font-medium">
-              ⚠ Customer profiles must be imported before their transactions — the email must already exist in your customer list.
+              ⚠ Customer profiles must be imported before their transactions —
+              the email must already exist in your customer list.
             </p>
           )}
         </div>
       </div>
 
-       {/* Example CSV */}
+      {/* Example CSV */}
       <div className="bg-card border border-border rounded-lg p-6 space-y-3">
         <h3 className="font-semibold">Example CSV — {config.label}</h3>
         <pre className="bg-muted rounded p-4 overflow-x-auto text-xs font-mono leading-relaxed">
